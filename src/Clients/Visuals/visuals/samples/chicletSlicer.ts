@@ -25,13 +25,14 @@
  */
 
 /// <reference path="../../_references.ts"/>
+
 module powerbi.visuals.samples {
 
     export interface ITableView {
         data(data: any[], dataIdFunction: (d) => {}, dataAppended: boolean): ITableView;
         rowHeight(rowHeight: number): ITableView;
         columnWidth(columnWidth: number): ITableView;
-        horizontal(horizontal: boolean): ITableView;
+        orientation(orientation: string): ITableView;
         rows(rows: number): ITableView;
         columns(columns: number): ITableView;
         viewport(viewport: IViewport): ITableView;
@@ -53,7 +54,7 @@ module powerbi.visuals.samples {
         baseContainer: D3.Selection;
         rowHeight: number;
         columnWidth: number;
-        horizontal: boolean;
+        orientation: string;
         rows: number;
         columns: number;
         viewport: IViewport;
@@ -106,8 +107,8 @@ module powerbi.visuals.samples {
             return this;
         }
 
-        public horizontal(horizontal: boolean): TableView {
-            this.options.horizontal = horizontal;
+        public orientation(orientation: string): TableView {
+            this.options.orientation = orientation;
             return this;
         }
 
@@ -160,7 +161,7 @@ module powerbi.visuals.samples {
                 this._totalRows = Math.ceil(count / TableView.defaultColumns);
             }
 
-            if (this.options.horizontal) {
+            if (this.options.orientation === Orientation.HORIZONTAL) {
                 this._totalRows = 1;
                 this._totalColumns = count;
             }
@@ -210,7 +211,7 @@ module powerbi.visuals.samples {
     // TODO: Generate these from above, defining twice just introduces potential for error
     export let  chicletSlicerProps = {
         general: {
-            horizontal: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'horizontal' },
+            orientation: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'orientation' },
             columns: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'columns' },
             rows: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'rows' },
             showDisabled: <DataViewObjectPropertyIdentifier>{ objectName: 'general', propertyName: 'showDisabled' },
@@ -257,14 +258,24 @@ module powerbi.visuals.samples {
     import PixelConverter = jsCommon.PixelConverter;
 
     module ChicletSlicerShowDisabled {
-        export let  INPLACE: string = 'inplace';
-        export let  BOTTOM: string = 'bottom';
-        export let  HIDE: string = 'hide';
+        export let  INPLACE: string = 'Inplace';
+        export let  BOTTOM: string = 'Bottom';
+        export let  HIDE: string = 'Hide';
 
         export let  type: IEnumType = createEnumType([
             { value: INPLACE, displayName: ChicletSlicerShowDisabled.INPLACE },
             { value: BOTTOM, displayName: ChicletSlicerShowDisabled.BOTTOM },
             { value: HIDE, displayName: ChicletSlicerShowDisabled.HIDE },
+        ]);
+    }
+
+    module Orientation {
+        export let HORIZONTAL: string = 'Horizontal';
+        export let VERTICAL: string = 'Vertical';
+
+        export let type: IEnumType = createEnumType([
+            { value: HORIZONTAL, displayName: HORIZONTAL },
+            { value: VERTICAL, displayName: VERTICAL }
         ]);
     }
 
@@ -292,7 +303,7 @@ module powerbi.visuals.samples {
 
     export interface ChicletSlicerSettings {
         general: {
-            horizontal: boolean;
+            orientation: string;
             columns: number;
             rows: number;
             multiselect: boolean;
@@ -364,9 +375,9 @@ module powerbi.visuals.samples {
                 general: {
                     displayName: data.createDisplayNameGetter('Visual_General'),
                     properties: {
-                        horizontal: {
-                            displayName: 'Horizontal Orientation',
-                            type: { bool: true }
+                        orientation: {
+                            displayName: 'Orientation',
+                            type: { enumeration: Orientation.type }
                         },
                         columns: {
                             displayName: 'Columns',
@@ -378,7 +389,7 @@ module powerbi.visuals.samples {
                         },
                         showDisabled: {
                             displayName: 'Show Disabled',
-                            type: { formatting: { showDisabled: true } }
+                            type: { enumeration: ChicletSlicerShowDisabled.type }
                         },
                         multiselect: {
                             displayName: 'Multiple selection',
@@ -563,7 +574,7 @@ module powerbi.visuals.samples {
         public static DefaultStyleProperties(): ChicletSlicerSettings {
             return {
                 general: {
-                    horizontal: false,
+                    orientation: Orientation.VERTICAL,
                     columns: 3,
                     rows: 0,
                     multiselect: true,
@@ -647,7 +658,7 @@ module powerbi.visuals.samples {
             let  defaultSettings = this.DefaultStyleProperties();
             let  objects = dataView.metadata.objects;
             if (objects) {
-                defaultSettings.general.horizontal = DataViewObjects.getValue<boolean>(objects, chicletSlicerProps.general.horizontal, defaultSettings.general.horizontal);
+                defaultSettings.general.orientation = DataViewObjects.getValue<string>(objects, chicletSlicerProps.general.orientation, defaultSettings.general.orientation);
                 defaultSettings.general.columns = DataViewObjects.getValue<number>(objects, chicletSlicerProps.general.columns, defaultSettings.general.columns);
                 defaultSettings.general.rows = DataViewObjects.getValue<number>(objects, chicletSlicerProps.general.rows, defaultSettings.general.rows);
                 defaultSettings.general.multiselect = DataViewObjects.getValue<boolean>(objects, chicletSlicerProps.general.multiselect, defaultSettings.general.multiselect);
@@ -834,7 +845,7 @@ module powerbi.visuals.samples {
                 selector: null,
                 objectName: 'general',
                 properties: {
-                    horizontal: slicerSettings.general.horizontal,
+                    orientation: slicerSettings.general.orientation,
                     columns: slicerSettings.general.columns,
                     rows: slicerSettings.general.rows,
                     showDisabled: slicerSettings.general.showDisabled,
@@ -885,7 +896,7 @@ module powerbi.visuals.samples {
             this.tableView
                 .rowHeight(height)
                 .columnWidth(this.settings.slicerText.width)
-                .horizontal(this.settings.general.horizontal)
+                .orientation(this.settings.general.orientation)
                 .rows(this.settings.general.rows)
                 .columns(this.settings.general.columns)
                 .data(data.slicerDataPoints,
@@ -926,7 +937,7 @@ module powerbi.visuals.samples {
 
             this.slicerBody = slicerContainer
                 .append('div').classed(ChicletSlicer.Body.class, true)
-                .classed('slicerBody-horizontal', settings.general.horizontal)
+                .classed('slicerBody-horizontal', settings.general.orientation === Orientation.HORIZONTAL)
                 .style({
                     'height': PixelConverter.toString(slicerBodyViewport.height),
                     'width': '100%',
@@ -969,7 +980,7 @@ module powerbi.visuals.samples {
                         });
 
                     this.slicerBody
-                        .classed('slicerBody-horizontal', settings.general.horizontal);
+                        .classed('slicerBody-horizontal', settings.general.orientation === Orientation.HORIZONTAL);
 
                     let  slicerText = rowSelection.selectAll(ChicletSlicer.LabelText.selector);
 
@@ -1051,7 +1062,7 @@ module powerbi.visuals.samples {
             let  tableViewOptions: TableViewViewOptions = {
                 rowHeight: this.getRowHeight(),
                 columnWidth: this.settings.slicerText.width,
-                horizontal: this.settings.general.horizontal,
+                orientation: this.settings.general.orientation,
                 rows: this.settings.general.rows,
                 columns: this.settings.general.columns,
                 enter: rowEnter,
