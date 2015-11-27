@@ -83,7 +83,9 @@ module powerbi.visuals.samples {
             this.options = $.extend(true, {}, options);
 
             this.options.baseContainer
-                .style('overflow-y', 'auto');
+                .style('overflow-y', 'auto')
+                .attr('drag-resize-disabled', true);
+
             this.scrollContainer = options.baseContainer
                 .append('div')
                 .attr('class', 'scrollRegion');
