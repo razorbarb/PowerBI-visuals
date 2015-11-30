@@ -120,6 +120,20 @@ module powerbi.visuals.samples {
         maxValue: 'Maximum'
     };
 
+    module Orientation {
+        export let HORIZONTALLEFT: string = 'Horizontal Left';
+        export let HORIZONTALRIGHT: string = 'Horizontal Right';
+        export let VERTICALTOP: string = 'Vertical Top';
+        export let VERTICALBOTTOM: string = 'Vertical Bottom';
+
+        export let type: IEnumType = createEnumType([
+            { value: HORIZONTALLEFT, displayName: HORIZONTALLEFT },
+            { value: HORIZONTALRIGHT, displayName: HORIZONTALRIGHT },
+            { value: VERTICALTOP, displayName: VERTICALTOP },
+            { value: VERTICALBOTTOM, displayName: VERTICALBOTTOM }
+        ]);
+    }
+
     export class BulletChart implements IVisual {
         private static RightScrollbarWidth: number = 10;
 
@@ -196,7 +210,7 @@ module powerbi.visuals.samples {
                     properties: {
                         orientation: {
                             displayName: 'Orientation',
-                            type: { text: true }
+                            type: { enumeration: Orientation.type }
                         }
                     }
                 },
@@ -301,7 +315,7 @@ module powerbi.visuals.samples {
                     maximumPercent: 200
                 },
                 orientation: {
-                    orientation: 'HL',
+                    orientation: Orientation.HORIZONTALLEFT,
                     reverse: false,
                     vertical: false
                 },
@@ -358,10 +372,10 @@ module powerbi.visuals.samples {
                 defaultSettings.axis.labelsReservedArea = DataViewObjects.getValue<number>(objects, bulletChartProps.axis.labelsReservedArea, defaultSettings.axis.labelsReservedArea);
 
             }
-            if (defaultSettings.orientation.orientation === 'HR' || defaultSettings.orientation.orientation === 'VB') {
+            if (defaultSettings.orientation.orientation === Orientation.HORIZONTALRIGHT || defaultSettings.orientation.orientation === Orientation.VERTICALBOTTOM) {
                 defaultSettings.orientation.reverse = true;
             }
-            if (defaultSettings.orientation.orientation === 'VT' || defaultSettings.orientation.orientation === 'VB') {
+            if (defaultSettings.orientation.orientation === Orientation.VERTICALTOP || defaultSettings.orientation.orientation === Orientation.VERTICALBOTTOM) {
                 defaultSettings.orientation.vertical = true;
             }
 
@@ -497,7 +511,7 @@ module powerbi.visuals.samples {
             let hasHighlights = this.hasHighlightValues(dataView, 0);
             let hasSelection = this.interactivityService.hasSelection();
             let bullet = (bullets: D3.Selection) => {
-                bullets.each(function(data: BulletDataPoint, index) {
+                bullets.each(function (data: BulletDataPoint, index) {
                     let svgBullet = d3.select(this);
 
                     let svgRotate = svgBullet
@@ -510,7 +524,7 @@ module powerbi.visuals.samples {
                     let settings = model.bulletChartSettings;
                     let ranges = [data.minimum, data.satisfactory, data.good, data.maximum];
                     let sortedRanges = ranges.sort(d3.descending);
-                    
+
                     let height = 25;
                     let reverse = settings.orientation.reverse, vertical = settings.orientation.vertical;
 
