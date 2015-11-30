@@ -121,6 +121,7 @@ module powerbi.visuals.samples {
     };
 
     export class BulletChart implements IVisual {
+        private static RightScrollbarWidth: number = 10;
 
         public static capabilities: VisualCapabilities = {
             dataRoles: [
@@ -364,11 +365,10 @@ module powerbi.visuals.samples {
                 defaultSettings.orientation.vertical = true;
             }
 
-            let categories,
-                categoryValues,
-                categoryValuesLen = 1,
-                categoryFormatString;
-
+            let categories: DataViewCategoryColumn,
+                categoryValues: any[],
+                categoryValuesLen: number = 1,
+                categoryFormatString: string;
 
             if (dataViewCategorical.categories) {
                 categories = dataViewCategorical.categories[0];
@@ -383,18 +383,21 @@ module powerbi.visuals.samples {
                 let toolTipItems = [];
                 let category: string, value: number = undefined, targetValue: number = undefined, minimum: number = undefined, satisfactory: number = undefined,
                     good: number = undefined, maximum: number = undefined;
-                let highlight: boolean = false;
+
+                let highlight: boolean = false,
+                    categoryIdentity: DataViewScopeIdentity;
+
                 if (categoryValues) {
                     let categoryValue = categoryValues[idx];
+
                     category = valueFormatter.format(categoryValue, categoryFormatString);
-                    let categoryIdentity = categories.identity ? categories.identity[idx] : null;
+                    categoryIdentity = categories.identity ? categories.identity[idx] : null;
                 }
                 let values = dataViewCategorical.values;
-                let metadataColumns = dataView.metadata.columns;
 
                 for (let i = 0; i < values.length; i++) {
 
-                    let col = metadataColumns[i];
+                    let col = values[i].source;
                     let currentVal = values[i].values[idx] || 0;
                     if (col && col.roles) {
                         if (col.roles[bulletChartRoleNames.value]) {
@@ -507,11 +510,8 @@ module powerbi.visuals.samples {
                     let settings = model.bulletChartSettings;
                     let ranges = [data.minimum, data.satisfactory, data.good, data.maximum];
                     let sortedRanges = ranges.sort(d3.descending);
-
-                    let height = 25;
-                    let maxRanges = d3.max(ranges).toString().length;
-                    let labelSize = d3.max([maxRanges * 5, settings.axis.labelsReservedArea]) + 10;
-
+                    
+                    let height = 25;                   
                     let reverse = settings.orientation.reverse, vertical = settings.orientation.vertical;
 
                     let labels = svgRotate.append('g')
@@ -526,7 +526,7 @@ module powerbi.visuals.samples {
                         .attr("fill", settings.axis.measureColor);
 
                     if (data.category) {
-                        width -= labelSize;
+                        width -= settings.axis.labelsReservedArea + BulletChart.RightScrollbarWidth;
 
                         svgTitle.text(data.category);
                     }
@@ -539,8 +539,8 @@ module powerbi.visuals.samples {
                         .attr("fill", settings.axis.unitsColor);
 
                     if (vertical) {
-                        width = model.height - labelSize;
-                        svgWrap.attr("transform", "rotate(90)translate(" + (reverse ? 0 : settings.axis.labelsReservedArea - 5) + "," + -1 * labelSize + ")");
+                        width = model.height - settings.axis.labelsReservedArea;
+                        svgWrap.attr("transform", "rotate(90)translate(" + (reverse ? 0 : settings.axis.labelsReservedArea - 5) + "," + -1 * settings.axis.labelsReservedArea + ")");
                         svgTitle
                             .attr('transform', 'translate(62.5,' + (reverse ? width + 20 : settings.axis.labelsReservedArea - 30) + ')')
                             .style('text-anchor', 'middle');
@@ -641,7 +641,7 @@ module powerbi.visuals.samples {
                         let axis = svgRotate.selectAll("g.axis").data([0]);
                         axis.enter().append("g")
                             .attr("class", "axis")
-                            .attr('transform', 'translate(' + (vertical ? 65 : 0) + ',' + (vertical ? (reverse ? 0 : labelSize) : height) + ')');
+                            .attr('transform', 'translate(' + (vertical ? 65 : 0) + ',' + (vertical ? (reverse ? 0 : settings.axis.labelsReservedArea) : height) + ')');
                         axis.call(xAxis.scale(scale));
                         axis.selectAll('line').style('stroke', settings.axis.axisColor);
                         axis.selectAll('text').style('fill', settings.axis.axisColor);
