@@ -511,11 +511,13 @@ module powerbi.visuals.samples {
                     let ranges = [data.minimum, data.satisfactory, data.good, data.maximum];
                     let sortedRanges = ranges.sort(d3.descending);
                     
-                    let height = 25;                   
+                    let height = 25;
                     let reverse = settings.orientation.reverse, vertical = settings.orientation.vertical;
 
                     let labels = svgRotate.append('g')
                         .classed('labels', true);
+
+                    let labelSize: number = settings.axis.labelsReservedArea + BulletChart.RightScrollbarWidth;
 
                     let width = model.width;
 
@@ -526,7 +528,7 @@ module powerbi.visuals.samples {
                         .attr("fill", settings.axis.measureColor);
 
                     if (data.category) {
-                        width -= settings.axis.labelsReservedArea + BulletChart.RightScrollbarWidth;
+                        width -= labelSize;
 
                         svgTitle.text(data.category);
                     }
@@ -539,13 +541,13 @@ module powerbi.visuals.samples {
                         .attr("fill", settings.axis.unitsColor);
 
                     if (vertical) {
-                        width = model.height - settings.axis.labelsReservedArea;
-                        svgWrap.attr("transform", "rotate(90)translate(" + (reverse ? 0 : settings.axis.labelsReservedArea - 5) + "," + -1 * settings.axis.labelsReservedArea + ")");
+                        width = model.height - labelSize;
+                        svgWrap.attr("transform", "rotate(90)translate(" + (reverse ? 0 : labelSize - 5) + "," + -1 * labelSize + ")");
                         svgTitle
-                            .attr('transform', 'translate(62.5,' + (reverse ? width + 20 : settings.axis.labelsReservedArea - 30) + ')')
+                            .attr('transform', 'translate(62.5,' + (reverse ? width + 20 : labelSize - 30) + ')')
                             .style('text-anchor', 'middle');
                         svgSubtitle
-                            .attr('transform', 'translate(62.5,' + (reverse ? width + 35 : settings.axis.labelsReservedArea - 15) + ')')
+                            .attr('transform', 'translate(62.5,' + (reverse ? width + 35 : labelSize - 15) + ')')
                             .style('text-anchor', 'middle');
                         svgRotate.attr('transform', 'translate(0,' + (reverse ? 5 : 0) + ')');
                     }
@@ -555,15 +557,15 @@ module powerbi.visuals.samples {
                             .attr('transform', 'translate(' + (reverse ? 0 : - 10) + ',' + ((height / 2) + 5) + ')')
                             .attr('x', (reverse ? width + 10 : 0))
                             .style('text-anchor', reverse ? 'start' : 'end')
-                            .attr('width', settings.axis.labelsReservedArea);
+                            .attr('width', labelSize);
                         svgSubtitle
                             .attr('transform', 'translate(' + (reverse ? 0 : - 10) + ',' + (height + 17) + ')')
                             .attr('x', (reverse ? width + 15 : 0))
                             .style('text-anchor', reverse ? 'start' : 'end')
-                            .attr('width', settings.axis.labelsReservedArea);
+                            .attr('width', labelSize);
 
                         if (data.category) {
-                            svgRotate.attr('transform', 'translate(' + (reverse ? 15 : settings.axis.labelsReservedArea) + ',5)');
+                            svgRotate.attr('transform', 'translate(' + (reverse ? 15 : labelSize) + ',5)');
                         } else {
                             svgRotate.attr('transform', 'translate(15,5)');
                         }
@@ -641,7 +643,7 @@ module powerbi.visuals.samples {
                         let axis = svgRotate.selectAll("g.axis").data([0]);
                         axis.enter().append("g")
                             .attr("class", "axis")
-                            .attr('transform', 'translate(' + (vertical ? 65 : 0) + ',' + (vertical ? (reverse ? 0 : settings.axis.labelsReservedArea) : height) + ')');
+                            .attr('transform', 'translate(' + (vertical ? 65 : 0) + ',' + (vertical ? (reverse ? 0 : labelSize) : height) + ')');
                         axis.call(xAxis.scale(scale));
                         axis.selectAll('line').style('stroke', settings.axis.axisColor);
                         axis.selectAll('text').style('fill', settings.axis.axisColor);
