@@ -27,6 +27,7 @@
 /// <reference path="../../_references.ts"/>
 
 module powerbi.visuals.samples {
+    import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
 
     export interface TimelineData {
         dragging: boolean;
