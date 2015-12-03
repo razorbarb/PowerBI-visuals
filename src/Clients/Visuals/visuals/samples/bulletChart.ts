@@ -137,6 +137,8 @@ module powerbi.visuals.samples {
     export class BulletChart implements IVisual {
         private static RightScrollbarWidth: number = 10;
 
+        private static ColumnClassName: string = "column";
+
         public static capabilities: VisualCapabilities = {
             dataRoles: [
                 {
@@ -533,7 +535,7 @@ module powerbi.visuals.samples {
 
                     let labelSize: number = settings.axis.labelsReservedArea + BulletChart.RightScrollbarWidth;
 
-                    let width = model.width;
+                    let width = model.width - BulletChart.RightScrollbarWidth;
 
                     let svgTitle = labels
                         .append('text')
@@ -590,7 +592,7 @@ module powerbi.visuals.samples {
                             'height': vertical ? model.height : 50,
                             'width': vertical ? 105 : model.width
                         })
-                        .style('fill-opacity', (hasHighlights || hasSelection) ? ((!hasHighlights && data.selected) || data.highlight ? '1' : '0.4') : '1');
+                        .style('opacity', (hasHighlights || hasSelection) ? ((!hasHighlights && data.selected) || data.highlight ? '1' : '0.4') : '1');
 
                     let targetValue = data.targetValue || 0;
                     let value = data.value || 0;
@@ -615,7 +617,8 @@ module powerbi.visuals.samples {
 
                     range.enter()
                         .append('rect')
-                        .attr('class', function(d, i) { return 'range s' + i; });
+                        .attr('class', function(d, i) { return 'range s' + i; })
+                        .classed(BulletChart.ColumnClassName, true);
 
                     range
                         .attr("x", (vertical ? scale : scale(data.minimum)))
@@ -817,7 +820,7 @@ module powerbi.visuals.samples {
         public renderSelection(hasSelection: boolean) {
             //console.log(this.options.hasHighlights);
             let options = this.options;
-            options.bullets.style("fill-opacity", (d: BulletDataPoint) => {
+            options.bullets.style("opacity", (d: BulletDataPoint) => {
                 return hasSelection ? (d.selected ? '1' : '0.4') : '1';
             });
         }
