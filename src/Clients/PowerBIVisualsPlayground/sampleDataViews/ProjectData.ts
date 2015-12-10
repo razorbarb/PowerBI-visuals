@@ -126,6 +126,7 @@ module powerbi.visuals.sampleDataViews {
                     values: dataValues
                 },
                 table: {
+                    identity: categoryIdentities,
                     rows: tableDataValues,
                     columns: dataViewMetadata.columns,
                 }

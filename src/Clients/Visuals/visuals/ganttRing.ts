@@ -39,7 +39,7 @@ module powerbi.visuals {
         layer: number; // int
         color?: string;
         progress: number; //percent
-        selector: SelectionId;
+        selector?: SelectionId;
         tooltip?: TooltipDataItem[];
     }
 
@@ -89,7 +89,7 @@ module powerbi.visuals {
                     kind: VisualDataRoleKind.Measure
                 },
                 {
-                    name: 'End',                    
+                    name: 'End',
                     displayName: 'End Timestamp',
                     preferredTypes: [{ dateTime: true }],
                     kind: VisualDataRoleKind.Measure
@@ -106,14 +106,25 @@ module powerbi.visuals {
                 categorical: {
                     categories: {
                         for: { in: 'Task' }
-                    }//,
+                    },
+                    values: {
+                        select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
+                    },
                     //values: {
-                    //    group: {
-                    //        by: 'Task',
-                    //        select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
-                    //        //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
-                    //    }
-                    //},                    
+                    //    //group: {
+                    //    //    by: 'Task',
+                    //    //    select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
+                    //    //    //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
+                    //    //}
+
+                    //    select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
+                    //    //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
+                    //},
+                },
+                table: {
+                    rows: {
+                        select: [{ for: { in: 'Task' } }, { for: { in: 'Start' } }, { for: { in: 'End' } }]
+                    }
                 }
             }],
             objects: {
@@ -227,7 +238,7 @@ module powerbi.visuals {
                 return 'Not Started';
             } else if (progress >= 100) {
                 return 'Completed';
-            } else{
+            } else {
                 return progress + '%';
             }
 
@@ -306,7 +317,6 @@ module powerbi.visuals {
                     'font-weight': 'bold'
                 })
                 .attr({
-                    'dy': '0.35em',
                     'text-anchor': 'middle'
                 })
                 .text(this.totalProgress);
@@ -314,7 +324,7 @@ module powerbi.visuals {
             progressText
                 .transition()
                 .duration(this.transitionDuration)
-                .style('font-size', (centerRadius * 0.4) + 'px');
+                .style('font-size', centerRadius * 0.4);
 
             //exit old progress text data
             progressText.exit().remove();
@@ -389,92 +399,111 @@ module powerbi.visuals {
             var defaultFill = { solid: { color: '#060' } };
             return !dataView.metadata ? defaultFill : DataViewObjects.getValue(dataView.metadata.objects, GanttRing.properties.progressFill, defaultFill);
         }
+
+        private static buildGantTasks(gantt: IGantt, names: string[], starts: any[], ends: any[], colors: IColorScale, getSelectionId: (task: IGanttTask, i: number) => SelectionId): void {
+            var start: number = starts.reduce((prev, curr) => prev < curr ? prev : curr).valueOf();
+            var end: number = ends.reduce((prev, curr) => prev > curr ? prev : curr).valueOf();
+            var duration: number = Math.abs(end - start);
+            var layers: IGanttTask[][] = [[]];
+
+            gantt.tasks = names.map((name, i) => {
+                var taskStart = starts[i] instanceof Date ? starts[i] : new Date(starts[i]);
+                var taskEnd = ends[i] instanceof Date ? ends[i] : new Date(ends[i]);
+                var taskStartValue = taskStart.valueOf();
+                var taskEndValue = taskEnd.valueOf();
+                var taskDuration = taskEndValue - taskStartValue;
+                var completed = Math.max(Date.now(), taskStartValue) - taskStartValue;
+                var progress = Math.round(GanttRing.calcPercent(completed, taskDuration));
+
+                var tooltip: TooltipDataItem[] = [
+                    {
+                        displayName: 'Name',
+                        value: name
+                    }, {
+                        displayName: 'Start',
+                        value: taskStart.toLocaleDateString()
+                    }, {
+                        displayName: 'End',
+                        value: taskEnd.toLocaleDateString()
+                    }, {
+                        displayName: 'Progress',
+                        value: progress + '%'
+                    }];
+
+                //Create Gantt Task
+                var task: IGanttTask = {
+                    name: name,
+                    tooltip: tooltip,
+                    layer: -1,
+                    progress: progress,
+                    color: colors.getColor(name).value,
+                    startAngle: GanttRing.calcTaskRadians(taskStartValue - start, duration, true),
+                    endAngle: GanttRing.calcTaskRadians(taskEndValue - start, duration)
+                };
+
+                task.selector = getSelectionId(task, i);
+
+                if (gantt.compress) {
+                    //compact the layers of the ghant to fit as tight as possible
+                    for (var l = 0; l < layers.length; l++) {
+
+                        //see if there is enough space in this row
+                        var hasRoom = layers[l].every(t => (t.startAngle >= task.endAngle || t.endAngle <= task.startAngle));
+
+                        if (hasRoom) {
+                            task.layer = l;
+                            layers[l].push(task);
+                            break;
+                        }
+                    }
+
+                    if (task.layer === -1) {
+                        layers.push([task]);
+                        task.layer = layers.length - 1;
+                    }
+                } else {
+                    task.layer = i;
+                }
+
+                //Return the gantt task
+                return task;
+            });
+
+            gantt.layers = gantt.compress ? layers.length : gantt.tasks.length;
+
+            var progress = Math.max(Date.now(), start) - start;
+            gantt.progress = Math.round(GanttRing.calcPercent(progress, duration));
+            gantt.progressAngle = GanttRing.calcTaskRadians(progress, duration);
+        }
 				
 		/**
 		  * Convert DataView to IGantt
 		  */
         private static converter(dataView: DataView, colors: IColorScale): IGantt {
             var gantt: IGantt = { tasks: [], layers: 0, progress: 0, progressAngle: 0, compress: GanttRing.compressLayout(dataView) };
+
+            //if (dataView.table && dataView.table.columns && dataView.table.columns.length === 3 && dataView.table.rows && dataView.table.rows.length > 0) {
+
+            //    var data = { names: [], starts: [], ends: [] };
+            //    dataView.table.rows.forEach(row => {
+            //        data.names.push(row[0]);
+            //        data.starts.push(row[1]);
+            //        data.ends.push(row[2]);
+            //    });
+            //    var identities = dataView.table.identity;
+            //    this.buildGantTasks(gantt, data.names, data.starts, data.ends, colors,
+            //        (task, i) => identities ? SelectionId.createWithId(identities[i]) : SelectionId.createWithMeasure(task.name, false));
+            //}
             if (dataView.categorical && dataView.categorical.categories && dataView.categorical.categories.length > 0) {
                 var categoryView: DataViewCategorical = dataView.categorical;
                 var category = categoryView.categories[0];
-                var names = category.values;                      
-                
+                var names = category.values;
+
                 if (categoryView.values && categoryView.values.length >= 2) {
                     var starts: any[] = categoryView.values[0].values;
                     var ends: any[] = categoryView.values[1].values;
-                    var start: number = starts.reduce((prev, curr) => prev < curr ? prev : curr).valueOf();
-                    var end: number = ends.reduce((prev, curr) => prev > curr ? prev : curr).valueOf();
-                    var duration: number = Math.abs(end - start);
-                    var layers: IGanttTask[][] = [[]];
 
-                    gantt.tasks = names.map((name, i) => {
-                        var taskStart = starts[i] instanceof Date ? starts[i] : new Date(starts[i]);
-                        var taskEnd = ends[i] instanceof Date ? ends[i] : new Date(ends[i]);
-                        var taskStartValue = taskStart.valueOf();
-                        var taskEndValue = taskEnd.valueOf();
-                        var taskDuration = taskEndValue - taskStartValue;
-                        var completed = Math.max(Date.now(), taskStartValue) - taskStartValue;
-                        var progress = Math.round(GanttRing.calcPercent(completed, taskDuration));
-
-                        var tooltip: TooltipDataItem[] = [
-                            {
-                                displayName: 'Name',
-                                value: name
-                            }, {
-                                displayName: 'Start',
-                                value: taskStart.toLocaleDateString()
-                            }, {
-                                displayName: 'End',
-                                value: taskEnd.toLocaleDateString()
-                            }, {
-                                displayName: 'Progress',
-                                value: progress + '%'
-                            }];
-
-                        //Create Gantt Task
-                        var task: IGanttTask = {
-                            name: name,
-                            tooltip: tooltip,
-                            layer: -1,
-                            progress: progress,
-                            selector: SelectionId.createWithId(category.identity[i]),
-                            color: colors.getColor(name).value,
-                            startAngle: GanttRing.calcTaskRadians(taskStartValue - start, duration),
-                            endAngle: GanttRing.calcTaskRadians(taskEndValue - start, duration)
-                        };
-
-                        if (gantt.compress) {
-                            //compact the layers of the ghant to fit as tight as possible
-                            for (var l = 0; l < layers.length; l++) {
-
-                                //see if there is enough space in this row
-                                var hasRoom = layers[l].every(t => (t.startAngle >= task.endAngle || t.endAngle <= task.startAngle));
-
-                                if (hasRoom) {
-                                    task.layer = l;
-                                    layers[l].push(task);
-                                    break;
-                                }
-                            }
-
-                            if (task.layer === -1) {
-                                layers.push([task]);
-                                task.layer = layers.length - 1;
-                            }
-                        } else {
-                            task.layer = i;
-                        }
-
-                        //Return the gantt task
-                        return task;
-                    });
-
-                    gantt.layers = gantt.compress ? layers.length : gantt.tasks.length;
-
-                    var progress = Math.max(Date.now(), start) - start;
-                    gantt.progress = Math.round(GanttRing.calcPercent(progress, duration));
-                    gantt.progressAngle = GanttRing.calcTaskRadians(progress, duration);
+                    this.buildGantTasks(gantt, names, starts, ends, colors, (task, i) => SelectionId.createWithId(category.identity[i]));
                 }
             }
 
@@ -484,16 +513,16 @@ module powerbi.visuals {
 		/**
 		  * Calculates what precent 'value' is of 'total' (caps return value at 100%)
 		  */
-        private static calcPercent(value: number, total: number) {
-            return value >= total ? 100 : value / (total / 100);
+        private static calcPercent(value: number, total: number, overflowValue: number = 100) {
+            return value >= total ? overflowValue : value / (total / 100);
         }
 		 
 		/**
 		  * Calculates the angle of a value as a percentage of the duration and returns the result in radians.
 		  */
-        private static calcTaskRadians(value: number, duration: number) {
+        private static calcTaskRadians(value: number, duration: number, defaultToZero: boolean = false) {
             //get percent that vlaue represents of duration
-            var percent = GanttRing.calcPercent(value, duration);
+            var percent = GanttRing.calcPercent(value, duration, defaultToZero ? 0 : 100);
             //convert percent into degrees
             var degrees = percent * 3.6;
             //convert degrees to radians
