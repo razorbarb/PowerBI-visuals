@@ -79,24 +79,41 @@ module powerbi.visuals {
             dataRoles: [
                 {
                     name: 'Task',
+                    displayName: 'Task',
                     kind: VisualDataRoleKind.Grouping
                 },
                 {
-                    name: 'Start Timestamp',
+                    name: 'Start',
+                    displayName: 'Start Timestamp',
                     preferredTypes: [{ dateTime: true }],
                     kind: VisualDataRoleKind.Measure
                 },
                 {
-                    name: 'End Timestamp',
+                    name: 'End',                    
+                    displayName: 'End Timestamp',
                     preferredTypes: [{ dateTime: true }],
                     kind: VisualDataRoleKind.Measure
                 }
             ],
             dataViewMappings: [{
+                conditions: [
+                    {
+                        'Task': { min: 0, max: 1 },
+                        'Start': { min: 0, max: 1 },
+                        'End': { min: 0, max: 1 }
+                    }
+                ],
                 categorical: {
                     categories: {
                         for: { in: 'Task' }
-                    }
+                    }//,
+                    //values: {
+                    //    group: {
+                    //        by: 'Task',
+                    //        select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
+                    //        //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
+                    //    }
+                    //},                    
                 }
             }],
             objects: {
@@ -383,7 +400,7 @@ module powerbi.visuals {
                 var category = categoryView.categories[0];
                 var names = category.values;                      
                 
-                if (categoryView.values.length >= 2) {
+                if (categoryView.values && categoryView.values.length >= 2) {
                     var starts: any[] = categoryView.values[0].values;
                     var ends: any[] = categoryView.values[1].values;
                     var start: number = starts.reduce((prev, curr) => prev < curr ? prev : curr).valueOf();
