@@ -26,7 +26,6 @@
 
 /* Please make sure that this path is correct */
 /// <reference path="../_references.ts"/>
-
 module powerbi.visuals {
     import SelectionManager = utility.SelectionManager;
     import ClassAndSelector = jsCommon.CssConstants.ClassAndSelector;
@@ -96,13 +95,7 @@ module powerbi.visuals {
                 }
             ],
             dataViewMappings: [{
-                conditions: [
-                    {
-                        'Task': { min: 0, max: 1 },
-                        'Start': { min: 0, max: 1 },
-                        'End': { min: 0, max: 1 }
-                    }
-                ],
+                conditions: [{ 'Task': { max: 1 }, 'Start': { max: 1 }, 'End': { max: 1 } }],
                 categorical: {
                     categories: {
                         for: { in: 'Task' }
@@ -110,21 +103,6 @@ module powerbi.visuals {
                     values: {
                         select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
                     },
-                    //values: {
-                    //    //group: {
-                    //    //    by: 'Task',
-                    //    //    select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
-                    //    //    //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
-                    //    //}
-
-                    //    select: [{ bind: { to: 'Start' } }, { bind: { to: 'End' } }]
-                    //    //select: [{ for: { in: 'Start' } }, { for: { in: 'End' } }]
-                    //},
-                },
-                table: {
-                    rows: {
-                        select: [{ for: { in: 'Task' } }, { for: { in: 'Start' } }, { for: { in: 'End' } }]
-                    }
                 }
             }],
             objects: {
@@ -180,7 +158,7 @@ module powerbi.visuals {
          * Called when visual should cleanup. It is about to be destroyed
         */
         public destroy() {
-            //enusre that any event handles are cleaned up
+            //ensure that any event handles are cleaned up
             this.svg.on('click', null);
             this.g.selectAll(GanttRing.TaskSlice.selector).on('click', null);
         }
@@ -199,7 +177,7 @@ module powerbi.visuals {
             //center the main group
             this.g.attr('transform', SVGUtil.translate(viewport.width / 2, viewport.height / 2));
 						
-            //calculate the radius or the largest possible arc that fits squarly within the viewport.
+            //calculate the radius or the largest possible arc that fits squarely within the viewport.
             var radius = Math.min(viewport.width, viewport.height) / 2;            
 
             //calculate the height of the arcs (inner radius to outer radius distance), plus account for the center circles empty space.
@@ -232,7 +210,7 @@ module powerbi.visuals {
         private getTotalProgressLabel(tasksCount: number, progress: number): string {
 
             if (tasksCount === 0) {
-                return 'Project Has No Tasks';
+                return 'Incomplete Data';
             }
             else if (progress <= 0) {
                 return 'Not Started';
@@ -317,14 +295,16 @@ module powerbi.visuals {
                     'font-weight': 'bold'
                 })
                 .attr({
+                    "dy": ".35em",
                     'text-anchor': 'middle'
                 })
                 .text(this.totalProgress);
 
             progressText
-                .transition()
-                .duration(this.transitionDuration)
-                .style('font-size', centerRadius * 0.4);
+                //For some reason transition breaks text sizing. commenting out for now.
+                //.transition()
+                //.duration(this.transitionDuration)
+                .style('font-size', Math.min(24, (centerRadius - (centerRadius * 0.05)) * 0.3) + 'px');
 
             //exit old progress text data
             progressText.exit().remove();
@@ -386,14 +366,14 @@ module powerbi.visuals {
         }
         
         /** 
-          * Retrives the layout compression setting from the dataviews metadata
+          * Retrieves the layout compression setting from the dataviews metadata
           */
         private static compressLayout(dataView: DataView): boolean {
             return dataView.metadata && DataViewObjects.getValue(dataView.metadata.objects, GanttRing.properties.layoutCompression, false);
         }
 
         /** 
-          * Retrives the progress fill setting from the dataviews metadata
+          * Retrieves the progress fill setting from the dataviews metadata
           */
         private static getProgressFill(dataView: DataView): Fill {
             var defaultFill = { solid: { color: '#060' } };
@@ -444,7 +424,7 @@ module powerbi.visuals {
                 task.selector = getSelectionId(task, i);
 
                 if (gantt.compress) {
-                    //compact the layers of the ghant to fit as tight as possible
+                    //compact the layers of the gantt to fit as tight as possible
                     for (var l = 0; l < layers.length; l++) {
 
                         //see if there is enough space in this row
@@ -482,6 +462,7 @@ module powerbi.visuals {
         private static converter(dataView: DataView, colors: IColorScale): IGantt {
             var gantt: IGantt = { tasks: [], layers: 0, progress: 0, progressAngle: 0, compress: GanttRing.compressLayout(dataView) };
 
+            //TODO: investigate benefits/costs of using table as alternative to category view
             //if (dataView.table && dataView.table.columns && dataView.table.columns.length === 3 && dataView.table.rows && dataView.table.rows.length > 0) {
 
             //    var data = { names: [], starts: [], ends: [] };
@@ -511,7 +492,7 @@ module powerbi.visuals {
         }
 
 		/**
-		  * Calculates what precent 'value' is of 'total' (caps return value at 100%)
+		  * Calculates what percent 'value' is of 'total' (caps return value at 100% and returns the overflowValue instead)
 		  */
         private static calcPercent(value: number, total: number, overflowValue: number = 100) {
             return value >= total ? overflowValue : value / (total / 100);
@@ -521,7 +502,7 @@ module powerbi.visuals {
 		  * Calculates the angle of a value as a percentage of the duration and returns the result in radians.
 		  */
         private static calcTaskRadians(value: number, duration: number, defaultToZero: boolean = false) {
-            //get percent that vlaue represents of duration
+            //get percent that value represents of duration
             var percent = GanttRing.calcPercent(value, duration, defaultToZero ? 0 : 100);
             //convert percent into degrees
             var degrees = percent * 3.6;
